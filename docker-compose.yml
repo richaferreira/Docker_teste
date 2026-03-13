@@ -1,0 +1,12 @@
+services:
+  # Seu site React/Vite
+  frontend:
+    build: .
+    ports:
+      - "8081:80"
+
+  # O servidor Apache
+  apache:
+    image: httpd:latest
+    ports:
+      - "8080:80"
