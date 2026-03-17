@@ -1,0 +1,120 @@
+# Production Docker Compose Configuration
+# Use: docker-compose -f docker-compose.prod.yml up
+
+version: '3.8'
+
+services:
+  # Docker Compose Tester Web App (Production)
+  tester:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NODE_ENV: production
+    container_name: docker-compose-tester-prod
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    depends_on:
+      apache:
+        condition: service_healthy
+      nginx:
+        condition: service_healthy
+    networks:
+      - web-servers
+    restart: always
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+  # Apache HTTP Server (Production)
+  apache:
+    image: httpd:latest
+    container_name: docker-compose-apache-prod
+    ports:
+      - "8080:80"
+    volumes:
+      - ./apache-content:/usr/local/apache2/htdocs:ro
+      # Uncomment to use custom config:
+      # - ./httpd.conf:/usr/local/apache2/conf/httpd.conf:ro
+    networks:
+      - web-servers
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+
+  # Nginx Server (Production)
+  nginx:
+    image: nginx:latest
+    container_name: docker-compose-nginx-prod
+    ports:
+      - "8081:80"
+    volumes:
+      - ./nginx-content:/usr/share/nginx/html:ro
+      # Uncomment to use custom config:
+      # - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - web-servers
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+
+networks:
+  web-servers:
+    driver: bridge
+
+volumes:
+  apache-content:
+  nginx-content:

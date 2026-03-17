@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apache HTTP Server</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #00ff88;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            text-align: center;
+            border: 2px solid #ff6b35;
+            padding: 40px;
+            background: rgba(255, 107, 53, 0.05);
+            border-radius: 4px;
+            box-shadow: 0 0 20px rgba(255, 107, 53, 0.3);
+            max-width: 600px;
+        }
+        
+        h1 {
+            font-size: 3em;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px rgba(255, 107, 53, 0.5);
+            color: #ff6b35;
+        }
+        
+        .status {
+            font-size: 1.2em;
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(0, 255, 136, 0.1);
+            border-left: 4px solid #00ff88;
+        }
+        
+        .info {
+            margin-top: 30px;
+            text-align: left;
+            font-size: 0.9em;
+            line-height: 1.8;
+        }
+        
+        .timestamp {
+            margin-top: 20px;
+            font-size: 0.8em;
+            color: #00d9ff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔥 APACHE</h1>
+        <div class="status">
+            ✓ Apache HTTP Server is running
+        </div>
+        <div class="info">
+            <p><strong>Server:</strong> Apache HTTP Server (httpd)</p>
+            <p><strong>Port:</strong> 80 (mapped to 8080)</p>
+            <p><strong>Status:</strong> ONLINE</p>
+            <p><strong>Container:</strong> docker-compose-apache</p>
+        </div>
+        <div class="timestamp">
+            <p>Generated: <span id="timestamp"></span></p>
+        </div>
+    </div>
+    
+    <script>
+        document.getElementById('timestamp').textContent = new Date().toLocaleString();
+    </script>
+</body>
+</html>

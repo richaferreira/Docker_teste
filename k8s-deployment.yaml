@@ -1,0 +1,323 @@
+---
+# Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: docker-compose-tester
+
+---
+# ConfigMap para conteúdo do Apache
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: apache-content
+  namespace: docker-compose-tester
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Apache HTTP Server</title>
+      <style>
+        body { font-family: monospace; background: #1a1a2e; color: #00ff88; text-align: center; padding: 50px; }
+        h1 { color: #ff6b35; }
+      </style>
+    </head>
+    <body>
+      <h1>🔥 APACHE</h1>
+      <p>Apache HTTP Server is running</p>
+    </body>
+    </html>
+
+---
+# ConfigMap para conteúdo do Nginx
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-content
+  namespace: docker-compose-tester
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Nginx Server</title>
+      <style>
+        body { font-family: monospace; background: #0a0e27; color: #00d9ff; text-align: center; padding: 50px; }
+        h1 { color: #00d9ff; }
+      </style>
+    </head>
+    <body>
+      <h1>⚡ NGINX</h1>
+      <p>Nginx Server is running</p>
+    </body>
+    </html>
+
+---
+# Service para Apache
+apiVersion: v1
+kind: Service
+metadata:
+  name: apache-service
+  namespace: docker-compose-tester
+spec:
+  selector:
+    app: apache
+  ports:
+    - port: 80
+      targetPort: 80
+      name: http
+  type: ClusterIP
+
+---
+# Service para Nginx
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-service
+  namespace: docker-compose-tester
+spec:
+  selector:
+    app: nginx
+  ports:
+    - port: 80
+      targetPort: 80
+      name: http
+  type: ClusterIP
+
+---
+# Service para Tester
+apiVersion: v1
+kind: Service
+metadata:
+  name: tester-service
+  namespace: docker-compose-tester
+spec:
+  selector:
+    app: tester
+  ports:
+    - port: 3000
+      targetPort: 3000
+      name: http
+  type: LoadBalancer
+
+---
+# Deployment para Apache
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: apache
+  namespace: docker-compose-tester
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: apache
+  template:
+    metadata:
+      labels:
+        app: apache
+    spec:
+      containers:
+      - name: apache
+        image: httpd:latest
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: apache-content
+          mountPath: /usr/local/apache2/htdocs
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+      volumes:
+      - name: apache-content
+        configMap:
+          name: apache-content
+
+---
+# Deployment para Nginx
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+  namespace: docker-compose-tester
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: nginx-content
+          mountPath: /usr/share/nginx/html
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+      volumes:
+      - name: nginx-content
+        configMap:
+          name: nginx-content
+
+---
+# Deployment para Tester
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tester
+  namespace: docker-compose-tester
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tester
+  template:
+    metadata:
+      labels:
+        app: tester
+    spec:
+      containers:
+      - name: tester
+        image: ghcr.io/seu-usuario/docker-compose-tester:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 3000
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: PORT
+          value: "3000"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "1000m"
+
+---
+# HorizontalPodAutoscaler para Tester
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: tester-hpa
+  namespace: docker-compose-tester
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: tester
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+
+---
+# Ingress para acesso externo
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: docker-compose-tester-ingress
+  namespace: docker-compose-tester
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  tls:
+  - hosts:
+    - tester.example.com
+    secretName: tester-tls
+  rules:
+  - host: tester.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: tester-service
+            port:
+              number: 3000
+  - host: apache.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: apache-service
+            port:
+              number: 80
+  - host: nginx.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: nginx-service
+            port:
+              number: 80

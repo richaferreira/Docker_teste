@@ -1,12 +1,72 @@
-services:
-  # Seu site React/Vite
-  frontend:
-    build: .
-    ports:
-      - "8081:80"
+version: '3.8'
 
-  # O servidor Apache
+services:
+  # Docker Compose Tester Web App
+  tester:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: docker-compose-tester
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    depends_on:
+      apache:
+        condition: service_healthy
+      nginx:
+        condition: service_healthy
+    networks:
+      - web-servers
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Apache HTTP Server
   apache:
     image: httpd:latest
+    container_name: docker-compose-apache
     ports:
       - "8080:80"
+    volumes:
+      - ./apache-content:/usr/local/apache2/htdocs
+    networks:
+      - web-servers
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  # Nginx Server
+  nginx:
+    image: nginx:latest
+    container_name: docker-compose-nginx
+    ports:
+      - "8081:80"
+    volumes:
+      - ./nginx-content:/usr/share/nginx/html
+    networks:
+      - web-servers
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+networks:
+  web-servers:
+    driver: bridge
+
+volumes:
+  apache-content:
+  nginx-content:
